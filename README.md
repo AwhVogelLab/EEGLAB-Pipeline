@@ -8,6 +8,7 @@ A standardized pipeline for first pass EEG artifact rejection using EEGLAB
 3. Install ERPLAB with the EEGLAB plugin manager using the instructions [here](https://github.com/lucklab/erplab/wiki/Installation).
 4. Install EYE-EEG with the EEGLAB plugin manager using the instructions [here](https://github.com/lucklab/erplab/wiki/Installation).
 5. `git clone` this repo (or download as a zip) into your desired folder.
+6. Optionally, download the test_data with `source get_test_data.sh`
 
 ## Usage
 
