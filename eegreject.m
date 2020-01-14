@@ -7,7 +7,7 @@ eeglab
 %% Options
 
 subjectParentDir = 'test_data';
-subjectDirectories = {'7'};  % optionally {} for recursive search
+subjectDirectories = {'6'};  % optionally {} for recursive search
 
 lowboundFilterHz = 0.01;
 highboundFilterHz = 30;
@@ -16,7 +16,18 @@ rerefType = 'mastoid'; % 'none', 'average', or 'mastoid'
 rerefExcludeChans = {'HEOG', 'VEOG', 'StimTrak'};
 customEquationList = '';  % optional
 
-EYEEEGKeyword = 'SYNC';
+EYEEEGKeyword = 'sync';
+startEvent = 21;
+endEvent = 21;
+eyeRecorded = 'left';  % 'both', 'left', or 'right'
+
+binlistFile = '';  % if empty, will create one for you
+timelockCodes = [11 12 13 14];  % codes to timelock to
+trialStart = -200;
+trialEnd = 1000;
+baselineStart = -200;
+baselineEnd = 0;
+
 
 %% Setup 
 
@@ -41,40 +52,40 @@ fprintf(log, ['Run started: ', datestr(now), '\n\n']);
 %% Main loop
 
 for subdir=1:numel(subjectDirectories)
-    subdirpath = fullfile(subjectParentDir, subjectDirectories{subdir});
+    subdirPath = fullfile(subjectParentDir, subjectDirectories{subdir});
     
-    disp(['Running ', subdirpath])
-    fprintf(log, ['Running ', subdirpath, '\n\n']);
+    disp(['Running ', subdirPath])
+    fprintf(log, ['Running ', subdirPath, '\n\n']);
     
-    vhdrDir = dir(fullfile(subdirpath, '*.vhdr'));
+    vhdrDir = dir(fullfile(subdirPath, '*.vhdr'));
     
     if numel(vhdrDir) == 0
-        warning(['Skipping ', subdirpath, '. No vhdr file found.'])
-        fprintf(log, ['Skipping ', subdirpath, '. No vhdr file found.\n\n']);
+        warning(['Skipping ', subdirPath, '. No vhdr file found.'])
+        fprintf(log, ['Skipping ', subdirPath, '. No vhdr file found.\n\n']);
         continue
     elseif numel(vhdrDir) > 1
-        warning(['Skipping ', subdirpath, '. More than one vhdr file found.'])
-        fprintf(log, ['Skipping ', subdirpath, '. More than one vhdr file found.\n\n']);
+        warning(['Skipping ', subdirPath, '. More than one vhdr file found.'])
+        fprintf(log, ['Skipping ', subdirPath, '. More than one vhdr file found.\n\n']);
         continue
     end
     
     vhdrFilename = vhdrDir(1).name;
     
-    ascDir = dir(fullfile(subdirpath, '*.asc'));
+    ascDir = dir(fullfile(subdirPath, '*.asc'));
     
     if numel(ascDir) == 0
-        warning(['Skipping ', subdirpath, '. No asc file found.'])
-        fprintf(log, ['Skipping ', subdirpath, '. No vhdr file found.\n\n']);
+        warning(['Skipping ', subdirPath, '. No asc file found.'])
+        fprintf(log, ['Skipping ', subdirPath, '. No vhdr file found.\n\n']);
         continue
     elseif numel(ascDir) > 1
-        warning(['Skipping ', subdirpath, '. More than one asc file found.'])
-        fprintf(log, ['Skipping ', subdirpath, '. More than one asc file found.\n\n']);
+        warning(['Skipping ', subdirPath, '. More than one asc file found.'])
+        fprintf(log, ['Skipping ', subdirPath, '. More than one asc file found.\n\n']);
         continue
     end
     
-    ascFullFilename = fullfile(subdirpath, ascDir(1).name);
+    ascFullFilename = fullfile(subdirPath, ascDir(1).name);
 
-    EEG = pop_loadbv(subdirpath, vhdrFilename);
+    EEG = pop_loadbv(subdirPath, vhdrFilename);
     
     EEG.setname = vhdrFilename(1:end-5);
     
@@ -110,17 +121,23 @@ for subdir=1:numel(subjectDirectories)
     fprintf(log, sprintf('Parsing asc file: %s\n\n', ascFullFilename));
     parseeyelink(ascFullFilename, EYEEEGMatFilename, EYEEEGKeyword);
 
+    diary 'log.txt'
+    if strcmp(eyeRecorded, 'both')
+        EEG = pop_importeyetracker(EEG, EYEEEGMatFilename, [startEvent endEvent], [2 3 5 6], {'L_GAZE_X' 'L_GAZE_Y' 'R_GAZE_X' 'R_GAZE_Y'}, 0, 1, 0, 0);
+    else
+        EEG = pop_importeyetracker(EEG, EYEEEGMatFilename, [startEvent endEvent], [2 3], {'GAZE_X' 'GAZE_Y'}, 0, 1, 0, 0);
+    end
+    diary off
 
-    %EEG = pop_importeyetracker(EEG,[filename(1:end-5) '_eye.mat'],[1 2] ,[2 3] ,{'GAZE_X' 'GAZE_Y'},0,1,0,0);
-    EEG = pop_importeyetracker(EEG, EYEEEGMatFilename, [1 2], [2 3 5 6], {'L_GAZE_X' 'L_GAZE_Y' 'R_GAZE_X' 'R_GAZE_Y'}, 0, 1, 0, 0);
-
-
-
-% pull in eye data and sync
-
-% do erplab binning
-
-% epoch
+    EEG = pop_creabasiceventlist(EEG, 'AlphanumericCleaning', 'on', 'BoundaryNumeric', {-99}, 'BoundaryString', {'boundary'}, 'Warning', 'off');
+    
+    if isempty(binlistFile)
+        make_binlist(subdirPath, timelockCodes)
+        binlistFile = fullfile(subdirPath, 'binlist.txt');
+    end
+    
+    EEG = pop_binlister(EEG, 'BDF', binlistFile);
+    EEG = pop_epochbin(EEG, [trialStart, trialEnd], sprintf('%d %d', baselineStart, baselineEnd));
 
 % do general noise rejection on eeg channels
 
@@ -166,4 +183,16 @@ function equationList = get_chan_equations(EEG, rerefType, excludes)
         equationList{end + 1} = sprintf(baseEquation, i, i, equationString, allLocs{i}); %#ok<AGROW>
     end
     
+end
+
+function make_binlist(subdirPath, timelockCodes)
+    % creates a simple binlist  (needed for epoching)
+
+    binfid = fopen(fullfile(subdirPath, 'binlist.txt'), 'w');
+
+    for i=1:numel(timelockCodes)
+        fprintf(binfid, sprintf('bin %d\n', i));
+        fprintf(binfid, sprintf('%d\n', timelockCodes(i)));
+        fprintf(binfid, sprintf('.{%d}\n\n', timelockCodes(i)));
+    end
 end
