@@ -28,7 +28,12 @@ trialEnd = 1000;
 baselineStart = -200;
 baselineEnd = 0;
 
-
+eyeMoveThresh = 1;  %deg
+distFromScreen = 738; %mm
+monitorWidth = 532;  %mm
+monitorHeight = 300;  %mm
+screenResX = 1920;  %px
+screenResY = 1080;  %px
 %% Setup 
 
 % Find all .vhdr files recursively if subjectDirectories is empty
@@ -49,6 +54,8 @@ end
 
 log = fopen('log.txt', 'a+t');
 fprintf(log, ['Run started: ', datestr(now), '\n\n']);
+
+maximumGazeDist = calcdeg2pix(eyeMoveThresh, distFromScreen, monitorWidth, monitorHeight, screenResX, screenResY);
 %% Main loop
 
 for subdir=1:numel(subjectDirectories)
@@ -139,14 +146,9 @@ for subdir=1:numel(subjectDirectories)
     EEG = pop_binlister(EEG, 'BDF', binlistFile);
     EEG = pop_epochbin(EEG, [trialStart, trialEnd], sprintf('%d %d', baselineStart, baselineEnd));
 
-% do general noise rejection on eeg channels
-
-% do EOG rejection based on muscle movements
-
-% do eye tracking rejection based on degrees
-
-% save data to .set file
-
+    % Perform artifact rejection
+    
+    EEG = pop_saveset(EEG, 'filename', fullfile(subdirPath, [vhdrFilename(1:end-5) '_unchecked.set']));
 end
 
 %% Clean up
@@ -195,4 +197,17 @@ function make_binlist(subdirPath, timelockCodes)
         fprintf(binfid, sprintf('%d\n', timelockCodes(i)));
         fprintf(binfid, sprintf('.{%d}\n\n', timelockCodes(i)));
     end
+end
+
+function [xPix, yPix] = calcdeg2pix(eyeMoveThresh, distFromScreen, monitorWidth, monitorHeight, screenResX, screenResY)
+    % takes a visual angle and returns the (rounded) horizontal and vertical number of
+    % pixels from fixation that would be
+
+    pixSize.X = monitorWidth/screenResX; %mm
+    pixSize.Y = monitorHeight/screenResY; %mm
+
+    mmfromfix = (2*distFromScreen) * tan(.5 * deg2rad(eyeMoveThresh));
+
+    xPix = round(mmfromfix/pixSize.X);
+    yPix = round(mmfromfix/pixSize.Y);
 end
