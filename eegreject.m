@@ -174,6 +174,7 @@ for subdir=1:numel(subjectDirectories)
     
     %flags trials where any channel has flatlined completely (usually eyetracking)
     if rejFlatline
+        flatlineIDX = allChanNumbers(~ismember({EEG.chanlocs.labels}, {'StimTrak'}));
         EEG  = pop_artflatline(EEG , 'Channel', allChanNumbers, 'Duration',  200, 'Flag', 5, 'Threshold', [0 0], 'Twindow', [rejectionStart rejectionEnd]);
     end 
     
