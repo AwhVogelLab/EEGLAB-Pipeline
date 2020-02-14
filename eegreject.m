@@ -6,7 +6,7 @@ eeglab
 
 %% Options
 
-subjectParentDir = './test_data';
+subjectParentDir = 'test_data';
 subjectDirectories = {'6'};  % optionally {} for recursive search
 
 lowboundFilterHz = 0.01;
@@ -22,7 +22,7 @@ endEvent = 21;
 eyeRecorded = 'left';  % 'both', 'left', or 'right'
 
 binlistFile = '';  % if empty, will create one for you
-timelockCodes = [3];  % codes to timelock to
+timelockCodes = [11 12 13 14];  % codes to timelock to
 trialStart = -200;
 trialEnd = 1250;
 baselineStart = -200;
