@@ -40,7 +40,7 @@ screenResY = 1080;  %px
 eogThresh = 50; %microv
 
 eegThresh = 75; %microv
-eegNoiseThresh = 75; %microv
+eegNoiseThresh = 75; %microv %100 works well for subjects with high alpha
 
 rejFlatline = true; %remove trials with any flatline data
 %% Setup 
@@ -60,7 +60,6 @@ if isempty(subjectDirectories)
     end
 end
 
-
 log = fopen('log.txt', 'a+t');
 fprintf(log, ['Run started: ', datestr(now), '\n\n']);
 
@@ -76,12 +75,12 @@ for subdir=1:numel(subjectDirectories)
     vhdrDir = dir(fullfile(subdirPath, '*.vhdr'));
     
     if numel(vhdrDir) == 0
-        warning(['Skipping ', subdirPath, '. No vhdr file found.'])
-        fprintf(log, ['Skipping ', subdirPath, '. No vhdr file found.\n\n']);
+        warning(['Skipping ', subjectDirectories{subdir}, '. No vhdr file found.'])
+        fprintf(log, ['Skipping ', subjectDirectories{subdir}, '. No vhdr file found.\n\n']);
         continue
     elseif numel(vhdrDir) > 1
-        warning(['Skipping ', subdirPath, '. More than one vhdr file found.'])
-        fprintf(log, ['Skipping ', subdirPath, '. More than one vhdr file found.\n\n']);
+        warning(['Skipping ', subjectDirectories{subdir}, '. More than one vhdr file found.'])
+        fprintf(log, ['Skipping ', subjectDirectories{subdir}, '. More than one vhdr file found.\n\n']);
         continue
     end
     
@@ -90,12 +89,12 @@ for subdir=1:numel(subjectDirectories)
     ascDir = dir(fullfile(subdirPath, '*.asc'));
     
     if numel(ascDir) == 0
-        warning(['Skipping ', subdirPath, '. No asc file found.'])
-        fprintf(log, ['Skipping ', subdirPath, '. No vhdr file found.\n\n']);
+        warning(['Skipping ', subjectDirectories{subdir}, '. No asc file found.'])
+        fprintf(log, ['Skipping ', subjectDirectories{subdir}, '. No vhdr file found.\n\n']);
         continue
     elseif numel(ascDir) > 1
-        warning(['Skipping ', subdirPath, '. More than one asc file found.'])
-        fprintf(log, ['Skipping ', subdirPath, '. More than one asc file found.\n\n']);
+        warning(['Skipping ', subjectDirectories{subdir}, '. More than one asc file found.'])
+        fprintf(log, ['Skipping ', subjectDirectories{subdir}, '. More than one asc file found.\n\n']);
         continue
     end
     
