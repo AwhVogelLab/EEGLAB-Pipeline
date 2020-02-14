@@ -7,7 +7,7 @@ eeglab
 %% Options
 
 subjectParentDir = './test_data';
-subjectDirectories = {'06'};  % optionally {} for recursive search
+subjectDirectories = {'6'};  % optionally {} for recursive search
 
 lowboundFilterHz = 0.01;
 highboundFilterHz = 30;
