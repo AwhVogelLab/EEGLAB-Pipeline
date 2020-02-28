@@ -44,8 +44,12 @@ eegNoiseThresh = 75; %microv %100 works well for subjects with high alpha
 
 eegResampleRate = 500; %hz
 
-eegResample = true;
+rejEye = true;
+rejEog = true;
+rejEegThresh = true;
+rejEegNoise = true;
 rejFlatline = true; %remove trials with any flatline data
+eegResample = true;
 %% Setup 
 
 % Find all .vhdr files recursively if subjectDirectories is empty
@@ -161,25 +165,28 @@ for subdir=1:numel(subjectDirectories)
     EEG = pop_binlister(EEG, 'BDF', binlistFile);
     EEG = pop_epochbin(EEG, [trialStart, trialEnd], sprintf('%d %d', baselineStart, baselineEnd));
 
-    % Perform artifact rejection
+    % PERFORM ARTIFACT REJECTION %
     allChanNumbers = 1:EEG.nbchan;
     
-    eyetrackingIDX = allChanNumbers(ismember({EEG.chanlocs.labels}, {'L_GAZE_X','L_GAZE_Y','R_GAZE_X','R_GAZE_Y','GAZE_X','GAZE_Y'}));    
-    %flags trials where absolute eyetracking value is greater than maximumGazeDist
-    EEG = pop_artextval(EEG , 'Channel',  eyetrackingIDX, 'Flag',  1, 'Threshold', [-maximumGazeDist maximumGazeDist], 'Twindow', [rejectionStart rejectionEnd]);
+    if rejEye %flags trials where absolute eyetracking value is greater than maximumGazeDist
+        eyetrackingIDX = allChanNumbers(ismember({EEG.chanlocs.labels}, {'L_GAZE_X','L_GAZE_Y','R_GAZE_X','R_GAZE_Y','GAZE_X','GAZE_Y'}));    
+        EEG = pop_artextval(EEG , 'Channel',  eyetrackingIDX, 'Flag',  1, 'Threshold', [-maximumGazeDist maximumGazeDist], 'Twindow', [rejectionStart rejectionEnd]);
+    end
     
-    eogIDX = allChanNumbers(ismember({EEG.chanlocs.labels}, {'HEOG','VEOG'}));    
-    %flags trials where absolute EOG value is greather than eogThresh
-    EEG = pop_artextval(EEG , 'Channel',  eogIDX, 'Flag',  2, 'Threshold', [-eogThresh eogThresh], 'Twindow', [rejectionStart rejectionEnd]);
+    if rejEog %flags trials where absolute EOG value is greather than eogThresh
+        eogIDX = allChanNumbers(ismember({EEG.chanlocs.labels}, {'HEOG','VEOG'}));    
+        EEG = pop_artextval(EEG , 'Channel',  eogIDX, 'Flag',  2, 'Threshold', [-eogThresh eogThresh], 'Twindow', [rejectionStart rejectionEnd]);
+    end
     
     eegIDX = allChanNumbers(~ismember({EEG.chanlocs.labels}, {'L_GAZE_X','L_GAZE_Y','R_GAZE_X','R_GAZE_Y','GAZE_X','GAZE_Y','HEOG','VEOG','StimTrak'}));
-    %flags trials where absolute EEG value is greater than eegThresh
-    EEG = pop_artextval(EEG , 'Channel',  eegIDX, 'Flag',  3, 'Threshold', [-eegThresh eegThresh], 'Twindow', [rejectionStart rejectionEnd]);
-    %flags trials where EEG peak to peak activity within moving window is greater than eegNoiseThresh 
-    EEG  = pop_artmwppth( EEG , 'Channel',  eegIDX, 'Flag',  4, 'Threshold', eegNoiseThresh, 'Twindow', [rejectionStart rejectionEnd], 'Windowsize', 200, 'Windowstep', 100); 
+    if rejEegThresh %flags trials where absolute EEG value is greater than eegThresh
+        EEG = pop_artextval(EEG , 'Channel',  eegIDX, 'Flag',  3, 'Threshold', [-eegThresh eegThresh], 'Twindow', [rejectionStart rejectionEnd]);
+    end
+    if rejEegNoise %flags trials where EEG peak to peak activity within moving window is greater than eegNoiseThresh 
+        EEG  = pop_artmwppth( EEG , 'Channel',  eegIDX, 'Flag',  4, 'Threshold', eegNoiseThresh, 'Twindow', [rejectionStart rejectionEnd], 'Windowsize', 200, 'Windowstep', 100); 
+    end
     
-    %flags trials where any channel has flatlined completely (usually eyetracking)
-    if rejFlatline
+    if rejFlatline %flags trials where any channel has flatlined completely (usually eyetracking)
         flatlineIDX = allChanNumbers(~ismember({EEG.chanlocs.labels}, {'StimTrak'}));
         EEG  = pop_artflatline(EEG , 'Channel', flatlineIDX, 'Duration',  200, 'Flag', 5, 'Threshold', [0 0], 'Twindow', [rejectionStart rejectionEnd]);
     end 
