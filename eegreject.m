@@ -42,6 +42,9 @@ eogThresh = 50; %microv
 eegThresh = 75; %microv
 eegNoiseThresh = 75; %microv %100 works well for subjects with high alpha
 
+eegResampleRate = 500; %hz
+
+eegResample = true;
 rejFlatline = true; %remove trials with any flatline data
 %% Setup 
 
@@ -104,6 +107,10 @@ for subdir=1:numel(subjectDirectories)
     
     EEG.setname = vhdrFilename(1:end-5);
     
+    if eegResample
+        EEG = pop_resample(EEG,eegResampleRate);
+    end
+    
     if lowboundFilterHz ~= 0 && highboundFilterHz ~= 0
         fprintf(log, sprintf('Bandpass filtering with lowboundFilterHz = %f and highboundFilterHz=%f\n\n', lowboundFilterHz, highboundFilterHz));
         EEG = pop_basicfilter(EEG, 1:EEG.nbchan, 'Boundary', 'boundary', 'Cutoff', [lowboundFilterHz highboundFilterHz], 'Design', 'butter', 'Filter', 'bandpass', 'Order', 2);
@@ -156,7 +163,7 @@ for subdir=1:numel(subjectDirectories)
 
     % Perform artifact rejection
     allChanNumbers = 1:EEG.nbchan;
-
+    
     eyetrackingIDX = allChanNumbers(ismember({EEG.chanlocs.labels}, {'L_GAZE_X','L_GAZE_Y','R_GAZE_X','R_GAZE_Y','GAZE_X','GAZE_Y'}));    
     %flags trials where absolute eyetracking value is greater than maximumGazeDist
     EEG = pop_artextval(EEG , 'Channel',  eyetrackingIDX, 'Flag',  1, 'Threshold', [-maximumGazeDist maximumGazeDist], 'Twindow', [rejectionStart rejectionEnd]);
@@ -174,7 +181,7 @@ for subdir=1:numel(subjectDirectories)
     %flags trials where any channel has flatlined completely (usually eyetracking)
     if rejFlatline
         flatlineIDX = allChanNumbers(~ismember({EEG.chanlocs.labels}, {'StimTrak'}));
-        EEG  = pop_artflatline(EEG , 'Channel', allChanNumbers, 'Duration',  200, 'Flag', 5, 'Threshold', [0 0], 'Twindow', [rejectionStart rejectionEnd]);
+        EEG  = pop_artflatline(EEG , 'Channel', flatlineIDX, 'Duration',  200, 'Flag', 5, 'Threshold', [0 0], 'Twindow', [rejectionStart rejectionEnd]);
     end 
     
     EEG = pop_saveset(EEG, 'filename', fullfile(subdirPath, [vhdrFilename(1:end-5) '_unchecked.set']));
