@@ -16,6 +16,12 @@ A standardized pipeline for first pass EEG artifact rejection using EEGLAB
 This script is essentially a template which you can copy and edit per project.
 
 ## Options
+
+**subjectParentDir** (str): folder that contains subjects' data folders<br />
+**subjectDirectories** (cell array of str): which subject folders to include in analysis<br />
+**noEyetracking** (cell array of str): which subjects to **not** do eyetracking rejection on <br />
+**doEogRejection** (cell array of str): which subject to do EOG rejection on<br />
+
 **lowboundFilterHz** (float): lower range for bandpass filtering of EEG<br />
 **highboundFilterHz** (float): upper range for bandpass filtering of EEG<br />
 
@@ -44,12 +50,14 @@ This script is essentially a template which you can copy and edit per project.
 **screenResY** (float): monitor resolution height in pixels<br />
 (the previous 5 parameters are necessary for calculating degrees of eye movement)<br />
 
+**eegResampleRate** (float): optional sampling rate to resample EEG at<br />
+**eegResample** (bool): set to true to resample EEG<br />
+
 **eogThresh** (float): eog rejection threshold in microvolts<br />
 
 **eegThresh** (float): eeg rejection threshold in microvolts<br />
 **eegNoiseThresh** (float): eeg noise rejection threshold in microvolts (see pop_artmwppth in ERPLAB)<br />
-
-**eegResampleRate** (float): optional sampling rate to resample EEG at<br />
-**eegResample** (bool): set to true to resample EEG<br />
+**eegMinSlop** (flot): %minimal absolute slope of the linear trend of the activity for rejection<br />
+**eegResample** (bool): %minimal R^2 for rejection<br />
 
 **rejFlatline** (bool): remove trials with flatline data <br />
