@@ -8,6 +8,8 @@ eeglab
 
 subjectParentDir = 'test_data';
 subjectDirectories = {'6'};  % optionally {} for recursive search
+noEyetracking = {};  %list all subjects who don't have ET data
+doEogRejection = {}; %no EOG rejection by default, add subjects to do EOG rejection (usually those who don't have ET data).
 
 lowboundFilterHz = 0.01;
 highboundFilterHz = 30;
@@ -37,14 +39,16 @@ monitorHeight = 300;  %mm
 screenResX = 1920;  %px
 screenResY = 1080;  %px
 
+eegResampleRate = 500; %hz
+eegResample = true;
+
 eogThresh = 50; %microv
 
 eegThresh = 75; %microv
 eegNoiseThresh = 75; %microv %100 works well for subjects with high alpha
+eegMinSlope = 75; %minimal absolute slope of the linear trend of the activity for rejection
+eegMinR2 = 0.3; %minimal R^2 (coefficient of determination between 0 and 1)
 
-eegResampleRate = 500; %hz
-
-eegResample = true;
 rejFlatline = true; %remove trials with any flatline data
 %% Setup 
 
@@ -70,7 +74,8 @@ maximumGazeDist = calcdeg2pix(eyeMoveThresh, distFromScreen, monitorWidth, monit
 %% Main loop
 
 for subdir=1:numel(subjectDirectories)
-    subdirPath = fullfile(subjectParentDir, subjectDirectories{subdir});
+    subject_number = subjectDirectories{subdir};
+    subdirPath = fullfile(subjectParentDir, subject_number);
     
     disp(['Running ', subdirPath])
     fprintf(log, ['Running ', subdirPath, '\n\n']);
@@ -164,25 +169,43 @@ for subdir=1:numel(subjectDirectories)
     % Perform artifact rejection
     allChanNumbers = 1:EEG.nbchan;
     
-    eyetrackingIDX = allChanNumbers(ismember({EEG.chanlocs.labels}, {'L_GAZE_X','L_GAZE_Y','R_GAZE_X','R_GAZE_Y','GAZE_X','GAZE_Y'}));    
-    %flags trials where absolute eyetracking value is greater than maximumGazeDist
-    EEG = pop_artextval(EEG , 'Channel',  eyetrackingIDX, 'Flag',  1, 'Threshold', [-maximumGazeDist maximumGazeDist], 'Twindow', [rejectionStart rejectionEnd]);
+    %EYETRACKING ARTIFACT REJECTION
+    if ~any(strcmp(noEyetracking,subject_number)) %if the subject has eyetracking
+        eyetrackingIDX = allChanNumbers(ismember({EEG.chanlocs.labels}, {'L_GAZE_X','L_GAZE_Y','R_GAZE_X','R_GAZE_Y','GAZE-X','GAZE-Y'}));    
+        %flags trials where absolute eyetracking value is greater than maximumGazeDist
+        EEG = pop_artextval(EEG , 'Channel',  eyetrackingIDX, 'Flag',  1, 'Threshold', [-maximumGazeDist maximumGazeDist], 'Twindow', [rejectionStart rejectionEnd]);
+    end
     
-    eogIDX = allChanNumbers(ismember({EEG.chanlocs.labels}, {'HEOG','VEOG'}));    
-    %flags trials where absolute EOG value is greather than eogThresh
-    EEG = pop_artextval(EEG , 'Channel',  eogIDX, 'Flag',  2, 'Threshold', [-eogThresh eogThresh], 'Twindow', [rejectionStart rejectionEnd]);
+    %EOG ARTIFACT REJECTION
+    if any(strcmp(doEogRejection,subject_number)) %if you want to do EOG rejection
+        eogIDX = allChanNumbers(ismember({EEG.chanlocs.labels}, {'HEOG','VEOG'}));    
+        %flags trials where absolute EOG value is greather than eogThresh
+        EEG = pop_artextval(EEG , 'Channel',  eogIDX, 'Flag',  2, 'Threshold', [-eogThresh eogThresh], 'Twindow', [rejectionStart rejectionEnd]);
+    end
     
-    eegIDX = allChanNumbers(~ismember({EEG.chanlocs.labels}, {'L_GAZE_X','L_GAZE_Y','R_GAZE_X','R_GAZE_Y','GAZE_X','GAZE_Y','HEOG','VEOG','StimTrak'}));
+    %EEG ARTIFACT REJECTION
+    eegIDX = allChanNumbers(~ismember({EEG.chanlocs.labels}, {'L_GAZE_X','L_GAZE_Y','R_GAZE_X','R_GAZE_Y','GAZE-X','GAZE-Y','HEOG','VEOG','StimTrak'}));
     %flags trials where absolute EEG value is greater than eegThresh
     EEG = pop_artextval(EEG , 'Channel',  eegIDX, 'Flag',  3, 'Threshold', [-eegThresh eegThresh], 'Twindow', [rejectionStart rejectionEnd]);
     %flags trials where EEG peak to peak activity within moving window is greater than eegNoiseThresh 
     EEG  = pop_artmwppth( EEG , 'Channel',  eegIDX, 'Flag',  4, 'Threshold', eegNoiseThresh, 'Twindow', [rejectionStart rejectionEnd], 'Windowsize', 200, 'Windowstep', 100); 
+    %flags trials where line fit to EEG has a slope above a certain threshold. Good for catching linear trends.
+    EEG = pop_rejtrend(EEG, 1, eegIDX, EEG.pnts, eegMinSlope, eegMinR2, 0, 0);
     
     %flags trials where any channel has flatlined completely (usually eyetracking)
     if rejFlatline
-        flatlineIDX = allChanNumbers(~ismember({EEG.chanlocs.labels}, {'StimTrak'}));
-        EEG  = pop_artflatline(EEG , 'Channel', flatlineIDX, 'Duration',  200, 'Flag', 5, 'Threshold', [0 0], 'Twindow', [rejectionStart rejectionEnd]);
-    end 
+        if ~any(strcmp(noEyetracking,subject_number)) %if sub has eyetracking, reject flatline eyetracking
+                flatlineIDX = allChanNumbers(~ismember({EEG.chanlocs.labels}, {'StimTrak','HEOG','VEOG'}));
+                EEG  = pop_artflatline(EEG , 'Channel', flatlineIDX, 'Duration',  200, 'Flag', 5, 'Threshold', [0 0], 'Twindow', [rejectionStart rejectionEnd]);
+        end
+        if any(strcmp(noEyetracking,subject_number)) %if sub does not have eyetracking, don't reject flatline eyetracking
+            flatlineIDX = allChanNumbers(~ismember({EEG.chanlocs.labels}, {'StimTrak','HEOG','VEOG','GAZE-X','GAZE-Y'}));
+            EEG  = pop_artflatline(EEG , 'Channel', flatlineIDX, 'Duration',  200, 'Flag', 5, 'Threshold', [0 0], 'Twindow', [rejectionStart rejectionEnd]);
+        end    
+    end
+    
+    %syncs rejection flags for ERPLAB and EEGLAB functions
+    EEG = pop_syncroartifacts(EEG,'Direction' ,'bidirectional');
     
     EEG = pop_saveset(EEG, 'filename', fullfile(subdirPath, [vhdrFilename(1:end-5) '_unchecked.set']));
 end
