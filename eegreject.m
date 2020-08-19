@@ -32,7 +32,7 @@ baselineEnd = 0;
 rejectionStart = -200;
 rejectionEnd = 1250;
 
-eyeMoveThresh = 1;  %deg
+eyeMoveThresh = 0.5;  %deg
 distFromScreen = 738; %mm
 monitorWidth = 532;  %mm
 monitorHeight = 300;  %mm
@@ -44,8 +44,8 @@ eegResample = true;
 
 eogThresh = 50; %microv
 
-eegThresh = 75; %microv
-eegNoiseThresh = 75; %microv %100 works well for subjects with high alpha
+eegThresh = 50; %microv
+eegNoiseThresh = 75; %microv 
 eegMinSlope = 75; %minimal absolute slope of the linear trend of the activity for rejection
 eegMinR2 = 0.3; %minimal R^2 (coefficient of determination between 0 and 1)
 
