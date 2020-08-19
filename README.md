@@ -1,5 +1,5 @@
 # EEGLAB-Pipeline
-A standardized pipeline for first pass EEG preprocessing and artifact rejection using EEGLAB
+A standardized pipeline for EEG preprocessing and artifact rejection using EEGLAB
 
 ## Installation
 
