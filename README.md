@@ -12,9 +12,9 @@ A standardized pipeline for EEG preprocessing and artifact rejection using EEGLA
 5. Install bva-io with the EEGLAB plugin manager.
 6. `git clone` this repo (or download as a zip) into your desired folder.
 7. Optionally, download the test_data with `source get_test_data.sh`
+8. You also need a way to convert EDF eyetracking files to ASC files that are viewable in MATLAB. Learn more [here](https://download.sr-support.com/dispdoc/page25.html).  
 
 ## Usage
-
 This script is essentially a template which you can copy and edit per project. After running this script, you will have saved "unchecked" .set files which can then be opened in EEGLAB. The trials that have been flagged for rejection are not yet removed. The rejection flags are stored in EEG.reject. You can visually inspect the rejections using this command: <br />
     *pop_eegplot( EEG, 1, 1, 1);*<br />
 This allows you to scroll through the EEG data. You have the option to manually add or remove rejections by clicking the trials of interest. Once you are done, you can press the "Reject" button and it will remove all trials flagged for rejection.<br />
