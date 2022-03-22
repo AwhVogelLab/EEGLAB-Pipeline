@@ -18,8 +18,14 @@ A standardized pipeline for EEG preprocessing and artifact rejection using EEGLA
 This script is essentially a template which you can copy and edit per project. After running this script, you will have saved "unchecked" .set files which can then be opened in EEGLAB. The trials that have been flagged for rejection are not yet removed. The rejection flags are stored in EEG.reject. You can visually inspect the rejections using this command: <br />
     *pop_eegplot( EEG, 1, 1, 1);*<br />
 This allows you to scroll through the EEG data. You have the option to manually add or remove rejections by clicking the trials of interest. Once you are done, you can press the "Reject" button and it will remove all trials flagged for rejection.<br />
+
 To simply apply the pipeline's rejections automatically, you can use the command:<br />
     *EEG = pop_rejepoch(EEG,EEG.reject.rejmanual,0);*
+
+Optionally, you can align the channels and stack them during visual inspection. To do this, use the align_channels function before visual inspection with this command:<br />
+*EEG = align_channels(EEG,true)*<br />
+After plotting the EEG, press the "Stack" button and all EEG channels will be aligned in the middle. EOG and Stimtrak will be above. Eyetracking will be below. Then you can reject as usual. It is recommended that you undo the alignment before saving your data. Do this with the same function:<br />
+*EEG = align_channels(EEG,false)*<br />
 
 ## Options
 
