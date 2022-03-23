@@ -6,8 +6,8 @@ eeglab
 
 %% Options
 
-subjectParentDir = 'test_data';
-subjectDirectories = {'6'};  % optionally {} for recursive search
+subjectParentDir = '../Acacia_Exp1/DATA-EEG';
+subjectDirectories = {'09'};  % optionally {} for recursive search
 noEyetracking = {};  %list all subjects who don't have ET data
 doEogRejection = {}; %no EOG rejection by default, add subjects to do EOG rejection (usually those who don't have ET data).
 
@@ -18,17 +18,17 @@ rerefType = 'mastoid'; % 'none', 'average', or 'mastoid'
 rerefExcludeChans = {'HEOG', 'VEOG', 'StimTrak'};
 customEquationList = '';  % optional
 
-EYEEEGKeyword = 'sync';
-startEvent = 21;
-endEvent = 21;
+EYEEEGKeyword = 'SYNC';
+startEvent = 190;
+endEvent = 191;
 eyeRecorded = 'left';  % 'both', 'left', or 'right'
 
 binlistFile = '';  % if empty, will create one for you
-timelockCodes = [11 12 13 14];  % codes to timelock to
-trialStart = -200;
+timelockCodes = [211, 213, 221, 222, 223];  % codes to timelock to
+trialStart = -250;
 trialEnd = 1250;
-baselineStart = -200;
-baselineEnd = 0;
+baselineStart = -250;
+baselineEnd = -50;
 rejectionStart = -200;
 rejectionEnd = 1250;
 
@@ -40,7 +40,7 @@ screenResX = 1920;  %px
 screenResY = 1080;  %px
 
 eegResampleRate = 500; %hz
-eegResample = true;
+eegResample = false;
 
 eogThresh = 50; %microv
 
@@ -49,7 +49,7 @@ eegNoiseThresh = 75; %microv
 eegMinSlope = 75; %minimal absolute slope of the linear trend of the activity for rejection
 eegMinR2 = 0.3; %minimal R^2 (coefficient of determination between 0 and 1)
 
-rejFlatline = true; %remove trials with any flatline data
+rejFlatline = false; %remove trials with any flatline data
 %% Setup 
 
 % Find all .vhdr files recursively if subjectDirectories is empty
