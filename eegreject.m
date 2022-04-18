@@ -6,7 +6,7 @@ eeglab
 
 %% Options
 
-subjectParentDir = '../Acacia_Exp1/DATA-EEG';
+subjectParentDir = 'test_data';
 subjectDirectories = {'6'};  % optionally {} for recursive search
 noEyetracking = {};  %list all subjects who don't have ET data
 doEogRejection = {}; %no EOG rejection by default, add subjects to do EOG rejection (usually those who don't have ET data).
