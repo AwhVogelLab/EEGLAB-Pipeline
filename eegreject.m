@@ -6,8 +6,8 @@ eeglab
 
 %% Options
 
-subjectParentDir = 'test_data';
-subjectDirectories = {'6'};  % optionally {} for recursive search
+subjectParentDir = '../Acacia_Exp1/DATA-EEG';
+subjectDirectories = {'004'};  % optionally {} for recursive search
 noEyetracking = {};  %list all subjects who don't have ET data
 doEogRejection = {}; %no EOG rejection by default, add subjects to do EOG rejection (usually those who don't have ET data).
 
@@ -18,18 +18,18 @@ rerefType = 'mastoid'; % 'none', 'average', or 'mastoid'
 rerefExcludeChans = {'HEOG', 'VEOG', 'StimTrak'};
 customEquationList = '';  % optional
 
-EYEEEGKeyword = 'sync';
-startEvent = 21;
-endEvent = 21;
+EYEEEGKeyword = 'SYNC';
+startEvent = 190; %P001=223, P002=211
+endEvent = 191;
 eyeRecorded = 'left';  % 'both', 'left', or 'right'
 
 binlistFile = '';  % if empty, will create one for you
-timelockCodes = [11 12 13 14];  % codes to timelock to
-trialStart = -200;
+timelockCodes = [211, 213, 221, 222, 223];  % codes to timelock to
+trialStart = -250;
 trialEnd = 1250;
-baselineStart = -200;
-baselineEnd = 0;
-rejectionStart = -200;
+baselineStart = -250;
+baselineEnd = -50;
+rejectionStart = -250;
 rejectionEnd = 1250;
 
 eegResampleRate = 500; %hz
