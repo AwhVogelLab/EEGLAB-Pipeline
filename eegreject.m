@@ -272,6 +272,6 @@ function [xPix, yPix] = calcdeg2pix(eyeMoveThresh, distFromScreen, monitorWidth,
 
     mmfromfix = (2*distFromScreen) * tan(.5 * deg2rad(eyeMoveThresh));
 
-    xPix = round(mmfromfix/pixSize.X);
-    yPix = round(mmfromfix/pixSize.Y);
+    xPix = mmfromfix/pixSize.X;
+    yPix = mmfromfix/pixSize.Y;
 end
