@@ -47,6 +47,9 @@ eyeSaccadeWindow = 80; %ms
 eyeSaccadeStep = 10; %ms
 
 eogThresh = 50; %microv
+eogSaccadeThresh = 20;  %microv
+eogSaccadeWindow = 150; %ms
+eogSaccadeStep = 10; %ms
 
 eegAbsThresh = 100; %microv
 eegNoiseThresh = 75; %microv 
@@ -241,6 +244,7 @@ for subdir=1:numel(subjectDirectories)
         eogIDX = allChanNumbers(ismember({EEG.chanlocs.labels}, {'HEOG','VEOG'}));    
         %flags trials where absolute EOG value is greather than eogThresh
         EEG = pop_artextval(EEG , 'Channel',  eogIDX, 'Flag',  2, 'Threshold', [-eogThresh eogThresh], 'Twindow', [rejectionStart rejectionEnd]);
+        EEG = pop_artstep(EEG , 'Channel',  eogIDX, 'Flag',  2, 'Threshold', eogSaccadeThresh, 'Twindow', [rejectionStart rejectionEnd], 'Windowsize', eogSaccadeWindow, 'Windowstep', eogSaccadeStep);
     end
     
     %EEG ARTIFACT REJECTION
