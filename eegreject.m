@@ -210,33 +210,23 @@ for subdir=1:numel(subjectDirectories)
             sprintf('y-saccade rejection: %i', sum(y_saccade_reject))
             saccade_reject = x_saccade_reject | y_saccade_reject;
             
+            % COMBINE DRIFT & SACCADE REJECTIONS
+            eye_reject = drift_reject | saccade_reject;
+            EEG.reject.rejmanual = eye_reject;
+        
             % ADD CHANNEL SPECIFIC FLAGS FOR VISUALIZING
-            EEG.reject.rejmanualE(allChanNumbers(ismember({EEG.chanlocs.labels}, {'L_GAZE_X', 'R_GAZE_X'})), :) = repmat(x_drift_reject | x_saccade_reject, 2,1);
-            EEG.reject.rejmanualE(allChanNumbers(ismember({EEG.chanlocs.labels}, {'L_GAZE_Y', 'R_GAZE_Y'})), :) = repmat(y_drift_reject | y_saccade_reject, 2,1);
+            EEG.reject.rejmanualE(allChanNumbers(ismember({EEG.chanlocs.labels}, {'L-GAZE-X', 'R-GAZE-X'})), :) = repmat(x_drift_reject | x_saccade_reject, 2,1);
+            EEG.reject.rejmanualE(allChanNumbers(ismember({EEG.chanlocs.labels}, {'L-GAZE-Y', 'R-GAZE-Y'})), :) = repmat(y_drift_reject | y_saccade_reject, 2,1);
             
         else
             % CHECKING FOR DRIFT
-            x_drift_reject = pop_artextval(EEG , 'Channel',  allChanNumbers(ismember({EEG.chanlocs.labels}, {'GAZE-X'})), 'Flag',  1, 'Threshold', [-GazeDistThresh_x GazeDistThresh_x], 'Twindow', [rejectionStart rejectionEnd]);
-            sprintf('x-drift rejection: %i', sum(x_drift_reject))
-            y_drift_reject = pop_artextval(EEG , 'Channel',  allChanNumbers(ismember({EEG.chanlocs.labels}, {'GAZE-Y'})), 'Flag',  1, 'Threshold', [-GazeDistThresh_y GazeDistThresh_y], 'Twindow', [rejectionStart rejectionEnd]);
-            sprintf('y-drift rejection: %i', sum(y_drift_reject))
-            drift_reject = x_drift_reject | y_drift_reject;
+            EEG = pop_artextval(EEG , 'Channel',  allChanNumbers(ismember({EEG.chanlocs.labels}, {'GAZE-X'})), 'Flag',  1, 'Threshold', [-GazeDistThresh_x GazeDistThresh_x], 'Twindow', [rejectionStart rejectionEnd]);
+            EEG = pop_artextval(EEG , 'Channel',  allChanNumbers(ismember({EEG.chanlocs.labels}, {'GAZE-Y'})), 'Flag',  1, 'Threshold', [-GazeDistThresh_y GazeDistThresh_y], 'Twindow', [rejectionStart rejectionEnd]);
             
             % CHECKING FOR SACCADES
-            x_saccade_reject = pop_artstep(EEG , 'Channel',  allChanNumbers(ismember({EEG.chanlocs.labels}, {'GAZE-X'})), 'Flag',  1, 'Threshold', GazeSaccadeThresh_x, 'Twindow', [rejectionStart rejectionEnd], 'Windowsize', eyeSaccadeWindow, 'Windowstep', eyeSaccadeStep);
-            sprintf('x-saccade rejection: %i', sum(x_saccade_reject))
-            y_saccade_reject = pop_artstep(EEG , 'Channel',  allChanNumbers(ismember({EEG.chanlocs.labels}, {'GAZE-Y'})), 'Flag',  1, 'Threshold', GazeSaccadeThresh_y, 'Twindow', [rejectionStart rejectionEnd], 'Windowsize', eyeSaccadeWindow, 'Windowstep', eyeSaccadeStep);
-            sprintf('y-saccade rejection: %i', sum(y_saccade_reject))
-            saccade_reject = x_saccade_reject | y_saccade_reject;
-            
-            % ADD CHANNEL SPECIFIC FLAGS FOR VISUALIZING
-            EEG.reject.rejmanualE(allChanNumbers(ismember({EEG.chanlocs.labels}, {'GAZE-X'})), :) = x_drift_reject | x_saccade_reject;
-            EEG.reject.rejmanualE(allChanNumbers(ismember({EEG.chanlocs.labels}, {'GAZE-Y'})), :) = y_drift_reject | y_saccade_reject;
+            EEG = pop_artstep(EEG , 'Channel',  allChanNumbers(ismember({EEG.chanlocs.labels}, {'GAZE-X'})), 'Flag',  1, 'Threshold', GazeSaccadeThresh_x, 'Twindow', [rejectionStart rejectionEnd], 'Windowsize', eyeSaccadeWindow, 'Windowstep', eyeSaccadeStep);
+            EEG = pop_artstep(EEG , 'Channel',  allChanNumbers(ismember({EEG.chanlocs.labels}, {'GAZE-Y'})), 'Flag',  1, 'Threshold', GazeSaccadeThresh_y, 'Twindow', [rejectionStart rejectionEnd], 'Windowsize', eyeSaccadeWindow, 'Windowstep', eyeSaccadeStep);
         end
-        
-        % COMBINE DRIFT & SACCADE REJECTIONS
-        eye_reject = drift_reject | saccade_reject;
-        EEG.reject.rejmanual = eye_reject;
     end
     
     %EOG ARTIFACT REJECTION
