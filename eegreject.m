@@ -32,17 +32,24 @@ baselineEnd = 0;
 rejectionStart = -200;
 rejectionEnd = 1250;
 
-eyeMoveThresh = 0.5;  %deg
+eegResampleRate = 500; %hz
+eegResample = true;
+
 distFromScreen = 738; %mm
 monitorWidth = 532;  %mm
 monitorHeight = 300;  %mm
 screenResX = 1920;  %px
 screenResY = 1080;  %px
 
-eegResampleRate = 500; %hz
-eegResample = true;
+eyeDistThresh = 1;  %deg
+eyeSaccadeThresh = .5;  %deg
+eyeSaccadeWindow = 80; %ms
+eyeSaccadeStep = 10; %ms
 
 eogThresh = 50; %microv
+eogSaccadeThresh = 20;  %microv
+eogSaccadeWindow = 150; %ms
+eogSaccadeStep = 10; %ms
 
 eegAbsThresh = 100; %microv
 eegNoiseThresh = 75; %microv 
@@ -73,7 +80,8 @@ end
 log = fopen('log.txt', 'a+t');
 fprintf(log, ['Run started: ', datestr(now), '\n\n']);
 
-maximumGazeDist = calcdeg2pix(eyeMoveThresh, distFromScreen, monitorWidth, monitorHeight, screenResX, screenResY);
+[GazeDistThresh_x, GazeDistThresh_y] = calcdeg2pix(eyeDistThresh, distFromScreen, monitorWidth, monitorHeight, screenResX, screenResY);
+[GazeSaccadeThresh_x, GazeSaccadeThresh_y] = calcdeg2pix(eyeSaccadeThresh, distFromScreen, monitorWidth, monitorHeight, screenResX, screenResY);
 %% Main loop
 
 for subdir=1:numel(subjectDirectories)
@@ -174,9 +182,51 @@ for subdir=1:numel(subjectDirectories)
     
     %EYETRACKING ARTIFACT REJECTION
     if ~any(strcmp(noEyetracking,subject_number)) %if the subject has eyetracking
-        eyetrackingIDX = allChanNumbers(ismember({EEG.chanlocs.labels}, {'L_GAZE_X','L_GAZE_Y','R_GAZE_X','R_GAZE_Y','GAZE-X','GAZE-Y'}));    
-        %flags trials where absolute eyetracking value is greater than maximumGazeDist
-        EEG = pop_artextval(EEG , 'Channel',  eyetrackingIDX, 'Flag',  1, 'Threshold', [-maximumGazeDist maximumGazeDist], 'Twindow', [rejectionStart rejectionEnd]);
+        if strcmp(eyeRecorded, 'both')
+            % CHECKING FOR DRIFT IN BOTH EYES
+            % x-direction
+            EEG_x_left = pop_artextval(EEG , 'Channel',  allChanNumbers(ismember({EEG.chanlocs.labels}, {'L_GAZE_X'})), 'Flag',  1, 'Threshold', [-GazeDistThresh_x GazeDistThresh_x], 'Twindow', [rejectionStart rejectionEnd]);
+            EEG_x_right = pop_artextval(EEG , 'Channel',  allChanNumbers(ismember({EEG.chanlocs.labels}, {'R_GAZE_X'})), 'Flag',  1, 'Threshold', [-GazeDistThresh_x GazeDistThresh_x], 'Twindow', [rejectionStart rejectionEnd]);
+            x_drift_reject = EEG_x_left.reject.rejmanual .* EEG_x_right.reject.rejmanual;
+            sprintf('x-drift rejection: %i', sum(x_drift_reject))
+            % y-direction
+            EEG_y_left = pop_artextval(EEG , 'Channel',  allChanNumbers(ismember({EEG.chanlocs.labels}, {'L_GAZE_Y'})), 'Flag',  1, 'Threshold', [-GazeDistThresh_y GazeDistThresh_y], 'Twindow', [rejectionStart rejectionEnd]);
+            EEG_y_right = pop_artextval(EEG , 'Channel',  allChanNumbers(ismember({EEG.chanlocs.labels}, {'R_GAZE_Y'})), 'Flag',  1, 'Threshold', [-GazeDistThresh_y GazeDistThresh_y], 'Twindow', [rejectionStart rejectionEnd]);
+            y_drift_reject = EEG_y_left.reject.rejmanual .* EEG_y_right.reject.rejmanual;
+            
+            sprintf('y-drift rejection: %i', sum(y_drift_reject))
+            drift_reject = x_drift_reject | y_drift_reject;
+            
+            % CHECKING FOR SACCADES IN BOTH EYES
+            % x-direction
+            EEG_x_left = pop_artstep(EEG , 'Channel',  allChanNumbers(ismember({EEG.chanlocs.labels}, {'L_GAZE_X'})), 'Flag',  1, 'Threshold', GazeSaccadeThresh_x, 'Twindow', [rejectionStart rejectionEnd], 'Windowsize', eyeSaccadeWindow, 'Windowstep', eyeSaccadeStep);
+            EEG_x_right = pop_artstep(EEG , 'Channel',  allChanNumbers(ismember({EEG.chanlocs.labels}, {'R_GAZE_X'})), 'Flag',  1, 'Threshold', GazeSaccadeThresh_x, 'Twindow', [rejectionStart rejectionEnd], 'Windowsize', eyeSaccadeWindow, 'Windowstep', eyeSaccadeStep);
+            x_saccade_reject = EEG_x_left.reject.rejmanual .* EEG_x_right.reject.rejmanual;
+            sprintf('x-saccade rejection: %i', sum(x_saccade_reject))
+            % y-direction
+            EEG_y_left = pop_artstep(EEG , 'Channel',  allChanNumbers(ismember({EEG.chanlocs.labels}, {'L_GAZE_Y'})), 'Flag',  1, 'Threshold', GazeSaccadeThresh_y, 'Twindow', [rejectionStart rejectionEnd], 'Windowsize', eyeSaccadeWindow, 'Windowstep', eyeSaccadeStep);
+            EEG_y_right = pop_artstep(EEG , 'Channel',  allChanNumbers(ismember({EEG.chanlocs.labels}, {'R_GAZE_Y'})), 'Flag',  1, 'Threshold', GazeSaccadeThresh_y, 'Twindow', [rejectionStart rejectionEnd], 'Windowsize', eyeSaccadeWindow, 'Windowstep', eyeSaccadeStep);
+            y_saccade_reject = EEG_y_left.reject.rejmanual .* EEG_y_right.reject.rejmanual;
+            sprintf('y-saccade rejection: %i', sum(y_saccade_reject))
+            saccade_reject = x_saccade_reject | y_saccade_reject;
+            
+            % COMBINE DRIFT & SACCADE REJECTIONS
+            eye_reject = drift_reject | saccade_reject;
+            EEG.reject.rejmanual = eye_reject;
+        
+            % ADD CHANNEL SPECIFIC FLAGS FOR VISUALIZING
+            EEG.reject.rejmanualE(allChanNumbers(ismember({EEG.chanlocs.labels}, {'L-GAZE-X', 'R-GAZE-X'})), :) = repmat(x_drift_reject | x_saccade_reject, 2,1);
+            EEG.reject.rejmanualE(allChanNumbers(ismember({EEG.chanlocs.labels}, {'L-GAZE-Y', 'R-GAZE-Y'})), :) = repmat(y_drift_reject | y_saccade_reject, 2,1);
+            
+        else
+            % CHECKING FOR DRIFT
+            EEG = pop_artextval(EEG , 'Channel',  allChanNumbers(ismember({EEG.chanlocs.labels}, {'GAZE-X'})), 'Flag',  1, 'Threshold', [-GazeDistThresh_x GazeDistThresh_x], 'Twindow', [rejectionStart rejectionEnd]);
+            EEG = pop_artextval(EEG , 'Channel',  allChanNumbers(ismember({EEG.chanlocs.labels}, {'GAZE-Y'})), 'Flag',  1, 'Threshold', [-GazeDistThresh_y GazeDistThresh_y], 'Twindow', [rejectionStart rejectionEnd]);
+            
+            % CHECKING FOR SACCADES
+            EEG = pop_artstep(EEG , 'Channel',  allChanNumbers(ismember({EEG.chanlocs.labels}, {'GAZE-X'})), 'Flag',  1, 'Threshold', GazeSaccadeThresh_x, 'Twindow', [rejectionStart rejectionEnd], 'Windowsize', eyeSaccadeWindow, 'Windowstep', eyeSaccadeStep);
+            EEG = pop_artstep(EEG , 'Channel',  allChanNumbers(ismember({EEG.chanlocs.labels}, {'GAZE-Y'})), 'Flag',  1, 'Threshold', GazeSaccadeThresh_y, 'Twindow', [rejectionStart rejectionEnd], 'Windowsize', eyeSaccadeWindow, 'Windowstep', eyeSaccadeStep);
+        end
     end
     
     %EOG ARTIFACT REJECTION
@@ -184,6 +234,7 @@ for subdir=1:numel(subjectDirectories)
         eogIDX = allChanNumbers(ismember({EEG.chanlocs.labels}, {'HEOG','VEOG'}));    
         %flags trials where absolute EOG value is greather than eogThresh
         EEG = pop_artextval(EEG , 'Channel',  eogIDX, 'Flag',  2, 'Threshold', [-eogThresh eogThresh], 'Twindow', [rejectionStart rejectionEnd]);
+        EEG = pop_artstep(EEG , 'Channel',  eogIDX, 'Flag',  2, 'Threshold', eogSaccadeThresh, 'Twindow', [rejectionStart rejectionEnd], 'Windowsize', eogSaccadeWindow, 'Windowstep', eogSaccadeStep);
     end
     
     %EEG ARTIFACT REJECTION
@@ -272,6 +323,6 @@ function [xPix, yPix] = calcdeg2pix(eyeMoveThresh, distFromScreen, monitorWidth,
 
     mmfromfix = (2*distFromScreen) * tan(.5 * deg2rad(eyeMoveThresh));
 
-    xPix = round(mmfromfix/pixSize.X);
-    yPix = round(mmfromfix/pixSize.Y);
+    xPix = mmfromfix/pixSize.X;
+    yPix = mmfromfix/pixSize.Y;
 end
