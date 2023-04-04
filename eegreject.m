@@ -1,4 +1,10 @@
 %% Read Me
+% This script runs the automatic preprocessing and artifact rejection
+% pipeline of EEG data from the AwhVogelLab.
+%
+% Contributors: William Thyer, Henry Jones, William XQ Ngiam.
+%
+% Last edit: WXQN added support for ignoring known noisy electrodes.
 
 %% Setup
 clearvars
@@ -16,6 +22,7 @@ highboundFilterHz = 30;
 
 rerefType = 'mastoid'; % 'none', 'average', or 'mastoid' 
 rerefExcludeChans = {'HEOG', 'VEOG', 'StimTrak'};
+noisyElectrodes = {}; % add channel names of noisy electrodes to be ignored in artifact rejection (e.g. {'FC2'})
 customEquationList = '';  % optional
 
 EYEEEGKeyword = 'sync';
@@ -239,6 +246,13 @@ for subdir=1:numel(subjectDirectories)
     
     %EEG ARTIFACT REJECTION
     eegIDX = allChanNumbers(~ismember({EEG.chanlocs.labels}, {'L_GAZE_X','L_GAZE_Y','R_GAZE_X','R_GAZE_Y','GAZE-X','GAZE-Y','HEOG','VEOG','StimTrak'}));
+    
+    % Ignore known noisy electrodes in rejection pipeline.
+    if ~isempty(noisyElectrodes)
+        whichChansToExclude = find(strcmp(noisyElectrodes,{EEG.chanlocs.labels}));
+        eegIDX(whichChansToExclude) = []; % Removes channel number of noisy electrode from index of to-be-analyzed channels.
+    end
+    
     %flags trials where absolute EEG value is greater than eegAbsThresh
     EEG = pop_artextval(EEG , 'Channel',  eegIDX, 'Flag',  3, 'Threshold', [-eegAbsThresh eegAbsThresh], 'Twindow', [rejectionStart rejectionEnd]);
     %flags trials where EEG peak to peak activity within moving window is greater than eegNoiseThresh 
@@ -253,9 +267,19 @@ for subdir=1:numel(subjectDirectories)
         if ~any(strcmp(noEyetracking,subject_number)) %if sub has eyetracking, reject flatline eyetracking
                 flatlineIDX = allChanNumbers(~ismember({EEG.chanlocs.labels}, {'StimTrak','HEOG','VEOG'}));
                 EEG  = pop_artflatline(EEG , 'Channel', flatlineIDX, 'Duration',  200, 'Flag', 5, 'Threshold', [0 0], 'Twindow', [rejectionStart rejectionEnd]);
+            % Ignore known noisy electrodes in rejection pipeline
+            if ~isempty(noisyElectrodes)
+                whichChansToExclude = find(strcmp(noisyElectrodes,{EEG.chanlocs.labels}));
+                flatlineIDX(whichChansToExclude) = [];  % Removes channel number of noisy electrode from index of to-be-analyzed channels.
+            end
         end
         if any(strcmp(noEyetracking,subject_number)) %if sub does not have eyetracking, don't reject flatline eyetracking
             flatlineIDX = allChanNumbers(~ismember({EEG.chanlocs.labels}, {'StimTrak','HEOG','VEOG','GAZE-X','GAZE-Y'}));
+            % Ignore known noisy electrodes in rejection pipeline
+            if ~isempty(noisyElectrodes)
+                whichChansToExclude = find(strcmp(noisyElectrodes,{EEG.chanlocs.labels}));
+                flatlineIDX(whichChansToExclude) = [];  % Removes channel number of noisy electrode from index of to-be-analyzed channels.
+            end
             EEG  = pop_artflatline(EEG , 'Channel', flatlineIDX, 'Duration',  200, 'Flag', 5, 'Threshold', [0 0], 'Twindow', [rejectionStart rejectionEnd]);
         end    
     end
