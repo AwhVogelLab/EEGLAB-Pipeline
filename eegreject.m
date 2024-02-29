@@ -263,24 +263,29 @@ for subdir=1:numel(subjectDirectories)
     EEG = pop_rejtrend(EEG, 1, eegIDX, EEG.pnts, eegMinSlope, eegMinR2, 0, 0);
     
     %flags trials where any channel has flatlined completely (usually eyetracking)
+  %flags trials where any channel has flatlined completely (usually eyetracking)
     if rejFlatline
         if ~any(strcmp(noEyetracking,subject_number)) %if sub has eyetracking, reject flatline eyetracking
                 flatlineIDX = allChanNumbers(~ismember({EEG.chanlocs.labels}, {'StimTrak','HEOG','VEOG'}));
+                 if ~isempty(noisyElectrodes)
+                    numNoisyElectrodes = numel(noisyElectrodes);
+                    for thisNoisyElectrode = 1:numNoisyElectrodes
+                        whichChansToExclude(thisNoisyElectrode) = find(strcmp(noisyElectrodes{thisNoisyElectrode},{EEG.chanlocs.labels}));  
+                    end
+                    flatlineIDX(whichChansToExclude) = [];
+                 end
                 EEG  = pop_artflatline(EEG , 'Channel', flatlineIDX, 'Duration',  200, 'Flag', 5, 'Threshold', [0 0], 'Twindow', [rejectionStart rejectionEnd]);
-            % Ignore known noisy electrodes in rejection pipeline
-            if ~isempty(noisyElectrodes)
-                whichChansToExclude = find(strcmp(noisyElectrodes,{EEG.chanlocs.labels}));
-                flatlineIDX(whichChansToExclude) = [];  % Removes channel number of noisy electrode from index of to-be-analyzed channels.
-            end
         end
         if any(strcmp(noEyetracking,subject_number)) %if sub does not have eyetracking, don't reject flatline eyetracking
             flatlineIDX = allChanNumbers(~ismember({EEG.chanlocs.labels}, {'StimTrak','HEOG','VEOG','GAZE-X','GAZE-Y'}));
-            % Ignore known noisy electrodes in rejection pipeline
-            if ~isempty(noisyElectrodes)
-                whichChansToExclude = find(strcmp(noisyElectrodes,{EEG.chanlocs.labels}));
-                flatlineIDX(whichChansToExclude) = [];  % Removes channel number of noisy electrode from index of to-be-analyzed channels.
-            end
-            EEG  = pop_artflatline(EEG , 'Channel', flatlineIDX, 'Duration',  200, 'Flag', 5, 'Threshold', [0 0], 'Twindow', [rejectionStart rejectionEnd]);
+                if ~isempty(noisyElectrodes)
+                    numNoisyElectrodes = numel(noisyElectrodes);
+                    for thisNoisyElectrode = 1:numNoisyElectrodes
+                        whichChansToExclude(thisNoisyElectrode) = find(strcmp(noisyElectrodes{thisNoisyElectrode},{EEG.chanlocs.labels}));  
+                    end
+                    flatlineIDX(whichChansToExclude) = [];
+                end
+             EEG  = pop_artflatline(EEG , 'Channel', flatlineIDX, 'Duration',  200, 'Flag', 5, 'Threshold', [0 0], 'Twindow', [rejectionStart rejectionEnd]);
         end    
     end
     
